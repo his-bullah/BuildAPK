@@ -1,7 +1,6 @@
 from kivy.app import App
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.button import Button
-from kivy.utils import platform
 
 class ForegroundApp(App):
     def build(self):
@@ -14,27 +13,16 @@ class ForegroundApp(App):
         return layout
 
     def start_service(self, instance):
-        if platform == 'android':
-            try:
-                from jnius import autoclass
-                
-                # Android activity context edukkuroam
-                mActivity = autoclass('org.kivy.android.PythonActivity').mActivity
-                
-                # Buildozer generate pannuna Java Service class-a edukkurom
-                # Format: <package.domain>.<package.name>.Service<ServiceName>
-                # Unga spec file padi idhu dhaan correct-aana name:
-                ServiceClass = autoclass('org.test.foregroundapp.ServiceMyservice')
-                
-                # Direct-a service-a start pandrom (Arguments: context, custom string)
-                ServiceClass.start(mActivity, "Foreground service started from app!")
-                
-                print("Foreground Service Started Successfully!")
-            except Exception as e:
-                print(f"Service start pandrappo error: {e}")
-        else:
-            print("Service can only be started on an Android device!")
+        instance.text = "Service Running..."
+        try:
+            from jnius import autoclass
+            mActivity = autoclass('org.kivy.android.PythonActivity').mActivity
+            ServiceClass = autoclass('org.test.foregroundapp.ServiceMyservice')
+            ServiceClass.start(mActivity, "Foreground service started from app!")
+            print("Foreground Service Started Successfully!")
+        except Exception as e:
+            instance.text = f"Error Through: {e}"
+            print(f"Service start pandrappo error: {e}")
 
 
-if __name__ == '__main__':
-    ForegroundApp().run()
+ForegroundApp().run()
