@@ -5,10 +5,8 @@ from kivy.uix.button import Button
 class ForegroundApp(App):
     def build(self):
         layout = BoxLayout(orientation='vertical', padding=50, spacing=20)
-        
         start_btn = Button(text="Start Foreground Service", font_size=20)
         start_btn.bind(on_press=self.start_service)
-        
         layout.add_widget(start_btn)
         return layout
 
