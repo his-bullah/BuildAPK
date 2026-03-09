@@ -1,0 +1,23 @@
+name: Build APK
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: kivy/buildozer
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Build
+      run: |
+        yes | buildozer android debug
+    
+    - name: Upload
+      uses: actions/upload-artifact@v4
+      with:
+        name: apk
+        path: bin/*.apk
