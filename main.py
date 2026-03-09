@@ -13,16 +13,16 @@ class ForegroundApp(App):
         return layout
 
     def start_service(self, instance):
-        instance.text = "Service Running..."
         try:
             from jnius import autoclass
             mActivity = autoclass('org.kivy.android.PythonActivity').mActivity
             ServiceClass = autoclass('org.test.foregroundapp.ServiceMyservice')
             ServiceClass.start(mActivity, "Foreground service started from app!")
-            print("Foreground Service Started Successfully!")
+            instance.text = "Service Running..."
+            print("Service Running...")
         except Exception as e:
             instance.text = f"Error Through: {e}"
-            print(f"Service start pandrappo error: {e}")
+            print(f"Error Through: {e}")
 
 
 ForegroundApp().run()
