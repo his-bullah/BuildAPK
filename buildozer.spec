@@ -32,7 +32,7 @@ orientation = portrait
 fullscreen = 0
 
 # (list) Permissions - FOREGROUND SERVICE & NOTIFICATION PERMISSIONS
-android.permissions = FOREGROUND_SERVICE, WAKE_LOCK, POST_NOTIFICATIONS
+android.permissions = FOREGROUND_SERVICE, WAKE_LOCK, POST_NOTIFICATIONS, INTERNET
 
 # (int) Target Android API, should be as high as possible.
 # API 33 is good for Android 13/14 compatibility
