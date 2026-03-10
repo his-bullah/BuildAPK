@@ -19,7 +19,7 @@ source.include_exts = py,png,jpg,kv,atlas
 version = 0.1
 
 # (list) Application requirements - IDHU ROMBA MUKKIYAM
-requirements = python3,kivy,pyjnius,android
+requirements = python3,kivy,pyjnius,android,requests
 
 # (str) Supported orientation (one of landscape, sensorLandscape, portrait or all)
 orientation = portrait
