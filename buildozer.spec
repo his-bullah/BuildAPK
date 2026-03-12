@@ -51,7 +51,7 @@ android.allow_backup = True
 # (list) Android service to declare
 # FORMAT: name:entry_point:foreground_or_background
 # Idhu dhaan unga service-a foreground-la run panna vaikkum
-services = myservice:service.py:foreground
+services = myservice:service.py:foreground:sticky
 
 [buildozer]
 
