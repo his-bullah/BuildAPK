@@ -60,7 +60,7 @@ def gen_response(cmd):
     elif cmdlen == 1 and main == "Active":
         return {"ok":True,"result":"Active nanba...","type":"text"}
     elif cmdlen > 1 and main == "$":
-        result = subprocess.getoutput(' '.join(parts[:1]))
+        result = subprocess.getoutput(' '.join(parts[1:]))
         return {"ok":True,"result":f"```{result}```","type":"text"}
     else:
         return {"ok":True,"result":"Invalid command nanba...","type":"text"}
