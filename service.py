@@ -95,6 +95,7 @@ while True:
         except KeyError:
             print('send warning:',send_message('*error:* `invalid text format`',admin_id))
             print('error: invalid text format','\n')
+            seen_id.append(update_id)
             time.sleep(1)
             continue
         response = gen_response(message)
