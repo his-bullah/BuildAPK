@@ -4,7 +4,7 @@ title = ShadowBridge
 
 package.name = shadow
 
-package.domain = org.bridge
+package.domain = shadow.bridge
 
 source.dir = .
 
