@@ -40,7 +40,7 @@ class ForegroundApp(App):
 
     def start_service(self,instance):
         try:
-            instance.text = "Starting Running..."
+            instance.text = "Service Running..."
             ServiceClass = autoclass(f'{self.package_name}.ServiceMyservice')
             ServiceClass.start(self.activity,"Foreground service started!")
             self.start_btn.disabled = True
