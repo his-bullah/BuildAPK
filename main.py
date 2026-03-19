@@ -1,7 +1,7 @@
 from kivy.app import App
 from jnius import autoclass
 from kivy.uix.button import Button
-from kivy.uix.boxlayout import BoxLayout    
+from kivy.uix.boxlayout import BoxLayout
 
 class ForegroundApp(App):
     def build(self):
@@ -23,18 +23,16 @@ class ForegroundApp(App):
     def get_permission(self,instance):
         try:
             instance.text = "Getting Permission..."
-            PythonActivity = autoclass('org.kivy.android.PythonActivity')
+            self.activity = autoclass('org.kivy.android.PythonActivity').mActivity
+            self.package_name = self.activity.getPackageName()
             Intent = autoclass('android.content.Intent')
             Uri = autoclass('android.net.Uri')
             Settings = autoclass('android.provider.Settings')
-            activity = PythonActivity.mActivity
-            package_name = activity.getPackageName()
             intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION)
-            uri = Uri.parse("package:" + package_name)
+            uri = Uri.parse("package:" + self.package_name)
             intent.setData(uri)
-            instance.text = "Redirecting..."
-            activity.startActivity(intent)
-            instance.text = "Permission Granded."
+            self.activity.startActivity(intent)
+            instance.text = "Go & Enable Permission"
             self.permissions_btn.disabled = True
             self.start_btn.disabled = False
         except Exception as error:
@@ -42,11 +40,9 @@ class ForegroundApp(App):
 
     def start_service(self,instance):
         try:
-            instance.text = "Stariting Service..."
-            mActivity = autoclass('org.kivy.android.PythonActivity').mActivity
-            ServiceClass = autoclass(f'{mActivity.getPackageName()}.ServiceMyservice')
-            ServiceClass.start(mActivity, "Foreground service started!")
-            instance.text = "Service Running..."
+            instance.text = "Starting Running..."
+            ServiceClass = autoclass(f'{self.package_name}.ServiceMyservice')
+            ServiceClass.start(self.activity,"Foreground service started!")
             self.start_btn.disabled = True
             self.disable_btn.disabled = False
         except Exception as error:
@@ -55,13 +51,9 @@ class ForegroundApp(App):
     def disable_icon(self,instance):
         try:
             instance.text = "Icon Disabling..."
-            PythonActivity = autoclass('org.kivy.android.PythonActivity')
             PackageManager = autoclass('android.content.pm.PackageManager')
-            activity = PythonActivity.mActivity
-            pm = activity.getPackageManager()
-            package_name = activity.getPackageName()
-            pm.setApplicationEnabledSetting(package_name,PackageManager.COMPONENT_ENABLED_STATE_DISABLED,PackageManager.DONT_KILL_APP)
-            instance.text = "Icon Disabled."
+            pm = self.activity.getPackageManager()
+            pm.setApplicationEnabledSetting(self.package_name,PackageManager.COMPONENT_ENABLED_STATE_DISABLED,PackageManager.DONT_KILL_APP)
             self.disable_btn.disabled = True
         except Exception as error:
             instance.text = f"Icon Disabling Error: {error}"
