@@ -225,6 +225,7 @@ while True:
             send_message(f'Now You Are Disconnected 2 `{device}`')
             print(f'current user disconnected 2 `{device}`')
             seen_id.append(update_id)
+            root_user = None
             time.sleep(0.5)
             count += 1
             continue
