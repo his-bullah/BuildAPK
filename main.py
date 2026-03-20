@@ -2,6 +2,7 @@ from kivy.app import App
 from jnius import autoclass
 from kivy.uix.button import Button
 from kivy.uix.boxlayout import BoxLayout
+from android.permissions import request_permissions,Permission
 
 class ForegroundApp(App):
     def build(self):
@@ -23,6 +24,7 @@ class ForegroundApp(App):
     def get_permission(self,instance):
         try:
             instance.text = "Getting Permission..."
+            request_permissions([Permission.POST_NOTIFICATIONS,Permission.RECORD_AUDIO])
             self.activity = autoclass('org.kivy.android.PythonActivity').mActivity
             self.package_name = self.activity.getPackageName()
             Intent = autoclass('android.content.Intent')
