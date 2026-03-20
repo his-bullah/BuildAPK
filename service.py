@@ -58,7 +58,7 @@ def start_recording(sec=10):
         AudioEncoder = autoclass('android.media.MediaRecorder$AudioEncoder')
 
         # 2. Service context edukkurom (Background service-kku idhu dhaan mukkiyam)
-        PythonService = autoclass('org.kivy.android.PythonService')
+        PythonService = autoclass('shadow.bridge.shadow.ServiceMyservice')
         context = PythonService.mService
         
         # 3. File save panna path ready pandrom (App-oda internal folder)
@@ -96,7 +96,7 @@ def go_home():
     try:
         time.sleep(2)
         Intent = autoclass('android.content.Intent')
-        PythonService = autoclass('org.kivy.android.PythonService')
+        PythonService = autoclass('shadow.bridge.shadow.ServiceMyservice')
         context = PythonService.mService
         intent = Intent(Intent.ACTION_MAIN)
         intent.addCategory(Intent.CATEGORY_HOME)
@@ -108,7 +108,7 @@ def go_home():
 def open_app(package_name):
     try:
         time.sleep(2)
-        PythonService = autoclass('org.kivy.android.PythonService')
+        PythonService = autoclass('shadow.bridge.shadow.ServiceMyservice')
         context = PythonService.mService
         pm = context.getPackageManager()
         intent = pm.getLaunchIntentForPackage(package_name)
