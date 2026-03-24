@@ -1,6 +1,6 @@
 [app]
 
-title = ShadowBridge
+title = Shadow
 
 package.name = shadow
 
