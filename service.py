@@ -51,7 +51,7 @@ def internet():
 
 def start_recording(sec=10):
     try:
-        time.sleep(2
+        time.sleep(2)
         MediaRecorder = autoclass('android.media.MediaRecorder')
         AudioSource = autoclass('android.media.MediaRecorder$AudioSource')
         OutputFormat = autoclass('android.media.MediaRecorder$OutputFormat')
