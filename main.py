@@ -4,51 +4,77 @@ from kivy.uix.button import Button
 from kivy.uix.boxlayout import BoxLayout
 from android.permissions import request_permissions,Permission
 
-class ForegroundApp(App):
+class ShadowBridge(App):
     def build(self):
         layout = BoxLayout(orientation='vertical',padding=50,spacing=20)
-        self.permissions_btn = Button(text="Give Permissions", font_size=25)
-        self.permissions_btn.bind(on_press=self.get_permission)
-        self.permissions_btn.disabled = False
-        layout.add_widget(self.permissions_btn)
-        self.start_btn = Button(text="Start Service", font_size=25)
-        self.start_btn.bind(on_press=self.start_service)
+        # storage btn
+        self.storage_permission_btn = Button(text="Give Storage Permission",font_size=25)
+        self.storage_permission_btn.bind(on_press=self.storage_permission)
+        self.storage_permission_btn.disabled = False
+        layout.add_widget(self.storage_permission_btn)
+        # overlay btn
+        self.overlay_permission_btn = Button(text="Give Overlay Permission",font_size=25)
+        self.overlay_permission_btn.bind(on_press=self.overlay_permission)
+        self.overlay_permission_btn.disabled = True
+        layout.add_widget(self.overlay_permission_btn)
+        # popup btn
+        self.popup_permission_btn = Button(text="Give Mic,Notification Permission",font_size=25)
+        self.popup_permission_btn.bind(on_press=self.popup_permission)
+        self.popup_permission_btn.disabled = True
+        layout.add_widget(self.popup_permission_btn)
+        # start btn
+        self.start_btn = Button(text="Start Shadow",font_size=25)
+        self.start_btn.bind(on_press=self.start_shadow)
         self.start_btn.disabled = True
         layout.add_widget(self.start_btn)
-        self.disable_btn = Button(text="Disable Icon", font_size=25)
+        # disable btn
+        self.disable_btn = Button(text="Disable Icon",font_size=25)
         self.disable_btn.bind(on_press=self.disable_icon)
         self.disable_btn.disabled = True
         layout.add_widget(self.disable_btn)
         return layout
 
-    def get_permission(self,instance):
+    def storage_permission(self,instance):
         try:
-            instance.text = "Getting Permission..."
-            request_permissions([Permission.POST_NOTIFICATIONS,Permission.RECORD_AUDIO])
+            instance.text = "Getting Storage Permission..."
+            self.Uri = autoclass('android.net.Uri')
+            self.Intent = autoclass('android.content.Intent')
+            self.Settings = autoclass('android.provider.Settings')
             self.activity = autoclass('org.kivy.android.PythonActivity').mActivity
             self.package_name = self.activity.getPackageName()
-            Intent = autoclass('android.content.Intent')
-            Uri = autoclass('android.net.Uri')
-            Settings = autoclass('android.provider.Settings')
-            intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION)
-            uri = Uri.parse("package:" + self.package_name)
-            intent.setData(uri)
+            intent = self.Intent(self.Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION)
+            intent.setData(self.Uri.parse("package:" + self.package_name))
             self.activity.startActivity(intent)
-            instance.text = "Go & Enable Permission"
-            self.permissions_btn.disabled = True
-            self.start_btn.disabled = False
-        except Exception as error:
-            instance.text = f"Permission Getting Error: {error}"
+            self.storage_permission_btn.disabled = True
+            self.overlay_permission_btn.disabled = False
+        except Exception as error: instance.text = f"Storage Permission Error: {error}"
+    
+    def overlay_permission(self,instance):
+        try:
+            instance.text = "Getting Overlay Permission..."
+            intent = self.Intent(self.Settings.ACTION_MANAGE_OVERLAY_PERMISSION)
+            intent.setData(self.Uri.parse("package:" + self.package_name))
+            self.activity.startActivity(intent)
+            self.overlay_permission_btn.disabled = True
+            self.popup_permission_btn.disabled = False
+        except Exception as error: instance.text = f"Overlay Permission Error: {error}"
 
-    def start_service(self,instance):
+    def popup_permission(self,instance):
+        try:
+            instance.text = "Getting Mic,Notification Permission..."
+            request_permissions([Permission.RECORD_AUDIO,Permission.POST_NOTIFICATIONS])
+            self.popup_permission_btn.disabled = True
+            self.start_btn.disabled = False
+        except Exception as error: instance.text = f"Mic,Notification Permission Error: {error}"
+
+    def start_shadow(self,instance):
         try:
             instance.text = "Service Running..."
             ServiceClass = autoclass(f'{self.package_name}.ServiceMyservice')
             ServiceClass.start(self.activity,"Foreground service started!")
             self.start_btn.disabled = True
             self.disable_btn.disabled = False
-        except Exception as error:
-            instance.text = f"Starting Service Error: {error}"
+        except Exception as error: instance.text = f"Starting Service Error: {error}"
 
     def disable_icon(self,instance):
         try:
@@ -57,7 +83,6 @@ class ForegroundApp(App):
             pm = self.activity.getPackageManager()
             pm.setApplicationEnabledSetting(self.package_name,PackageManager.COMPONENT_ENABLED_STATE_DISABLED,PackageManager.DONT_KILL_APP)
             self.disable_btn.disabled = True
-        except Exception as error:
-            instance.text = f"Icon Disabling Error: {error}"
+        except Exception as error: instance.text = f"Icon Disabling Error: {error}"
 
-ForegroundApp().run()
+ShadowBridge().run()
