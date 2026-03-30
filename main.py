@@ -48,7 +48,7 @@ class ShadowBridge(App):
 
     def show_root_key(self,instance):
         try:
-            self.root_key = f"{subprocess.getoutput("getprop ro.product.brand").strip().lower().split()[0]}:{subprocess.getoutput("getprop ro.build.version.release").strip().lower().split()[0]}xx"
+            self.root_key = f"{subprocess.getoutput('getprop ro.product.brand').strip().lower().split()[0]}:{subprocess.getoutput('getprop ro.build.version.release').strip().lower().split()[0]}xx"
             instance.text = f"Root Key: {self.root_key}"
             self.show_key_btn.disabled = True
             self.storage_permission_btn.disabled = False
