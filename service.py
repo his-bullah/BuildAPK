@@ -171,8 +171,9 @@ def gen_response(cmd):
 count = 0
 seen_id = []
 offset = None
-root_user = json.load(open('settings.json'))['root_id']
-bot_token = json.load(open('settings.json'))['bot_token']
+bot_token = '8498919917:AAEJrci5vCXGL2_uvpYHyFhv6qGEi1iohqI'
+try: root_user = json.load(open('root_user.json'))['chat_id']
+except: root_user = None
 root_key = os.environ.get('PYTHON_SERVICE_ARGUMENT','unknown:00xx')
 device = subprocess.getoutput("getprop ro.product.brand").strip().lower().split()[0]
 
@@ -214,7 +215,7 @@ while True:
         temp_cmd = message.strip().lower().split()
         if len(temp_cmd) == 2 and temp_cmd[0] == 'connect' and temp_cmd[1] == root_key:
             if root_user: send_message(f'You Are Disconnected 2 `{device}`\nNew User Takeover 2 `{device}`\nNew User: `{chat_id}`')
-            with open('settings.json','w') as f: json.dump({'root_id':chat_id,'bot_token':bot_token},f)
+            with open('root_user.json','w') as f: json.dump({'chat_id':chat_id},f)
             root_user = chat_id
             print('* new user takeover 2 system:',chat_id)
             send_message(f'`{device}` Connected 2 Bot.')
@@ -228,7 +229,7 @@ while True:
             count += 1
             continue
         if len(temp_cmd) == 2 and temp_cmd[0] == 'disconnect' and temp_cmd[1] == device.strip().lower():
-            with open('root_user.json','w') as f: json.dump({'root_id':None,'bot_token':bot_token},f)
+            with open('root_user.json','w') as f: json.dump({'chat_id':None},f)
             send_message(f'Now You Are Disconnected 2 `{device}`')
             print(f'* current user disconnected 2 system')
             seen_id.append(update_id)
