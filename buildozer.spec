@@ -28,7 +28,7 @@ android.archs = arm64-v8a
 
 android.allow_backup = True
 
-services = myservice:service.py:foreground:sticky
+services = shadow:service.py:foreground:sticky
 
 [buildozer]
 
